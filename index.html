@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#e8eef2" />
+  <title>清页</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #14202b;
+      --ink-soft: #4a5d6e;
+      --mist: #e8eef2;
+      --paper: #fbfcfd;
+      --sea: #1a6b6b;
+      --sea-deep: #0f4a4a;
+      --amber: #c4782a;
+      --line: rgba(20, 32, 43, 0.1);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --font-brand: "Syne", "PingFang SC", sans-serif;
+      --font-read: "Literata", "Songti SC", serif;
+      --font-ui: "Syne", "PingFang SC", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100%;
+      font-family: var(--font-ui);
+      color: var(--ink);
+      background: var(--mist);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background:
+        radial-gradient(90% 60% at 0% 0%, rgba(26, 107, 107, 0.14), transparent 55%),
+        radial-gradient(70% 50% at 100% 10%, rgba(196, 120, 42, 0.08), transparent 50%),
+        linear-gradient(180deg, #eef3f6 0%, var(--mist) 45%, #dfe7ed 100%);
+    }
+
+    .app {
+      max-width: 560px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      padding: calc(14px + var(--safe-top)) 16px calc(28px + var(--safe-bottom));
+    }
+
+    .top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+    body.ready .top { opacity: 1; transform: none; }
+
+    .brand {
+      font-family: var(--font-brand);
+      font-weight: 800;
+      font-size: clamp(1.9rem, 8vw, 2.4rem);
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+    .brand em { font-style: normal; color: var(--sea); }
+    .brand-sub {
+      font-size: 0.72rem;
+      color: var(--ink-soft);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .clip-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.6s ease 0.08s, transform 0.6s ease 0.08s;
+    }
+    body.ready .clip-bar { opacity: 1; transform: none; }
+
+    .url-row { display: flex; gap: 8px; }
+    #url {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid var(--line);
+      background: rgba(251, 252, 253, 0.9);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+    }
+    #url:focus {
+      border-color: rgba(26, 107, 107, 0.45);
+      box-shadow: 0 0 0 3px rgba(26, 107, 107, 0.12);
+    }
+
+    #clip-btn {
+      border: none;
+      background: var(--sea);
+      color: #fff;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0 14px;
+      border-radius: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    #clip-btn:disabled { opacity: 0.65; }
+
+    .actions-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ghost {
+      border: 1px solid var(--line);
+      background: rgba(251, 252, 253, 0.55);
+      color: var(--ink-soft);
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.78rem;
+      padding: 7px 11px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .ghost.on, .ghost:hover {
+      background: rgba(26, 107, 107, 0.12);
+      color: var(--sea-deep);
+    }
+
+    #paste-panel { display: none; flex-direction: column; gap: 8px; }
+    #paste-panel.open { display: flex; }
+    #paste-area {
+      width: 100%;
+      min-height: 90px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.78rem;
+      background: var(--paper);
+      resize: vertical;
+    }
+    #paste-clip {
+      align-self: flex-end;
+      border: none;
+      background: var(--ink);
+      color: #fff;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.82rem;
+      padding: 9px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      background: rgba(20, 32, 43, 0.06);
+      border-radius: 14px;
+      margin-bottom: 14px;
+    }
+    .tab {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.82rem;
+      padding: 10px 8px;
+      border-radius: 11px;
+      color: var(--ink-soft);
+      cursor: pointer;
+    }
+    .tab.active {
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: 0 4px 14px rgba(20, 32, 43, 0.06);
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .source-card, .studio-out, .ask-box {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .source-card.hidden { display: none; }
+    .source-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 4px;
+      font-family: var(--font-read);
+    }
+    .source-meta, #stats-line {
+      font-size: 0.72rem;
+      color: var(--ink-soft);
+      line-height: 1.4;
+    }
+    #stats-line { color: var(--amber); margin: 8px 0; }
+
+    .format-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      margin: 10px 0;
+    }
+    #format {
+      border: 1px solid var(--line);
+      background: transparent;
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.78rem;
+    }
+    .tool {
+      border: none;
+      background: rgba(26, 107, 107, 0.1);
+      color: var(--sea-deep);
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .tool.primary { background: var(--sea); color: #fff; }
+
+    #preview-body {
+      font-family: var(--font-read);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 36vh;
+      overflow: auto;
+    }
+
+    .lib-head, .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin: 16px 0 10px;
+    }
+    .lib-head h2, .section-head h2 {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    #count { color: var(--sea); font-weight: 700; }
+
+    #doc-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .doc-item {
+      display: flex;
+      gap: 4px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+    }
+    .doc-item.focus {
+      border-color: rgba(26, 107, 107, 0.35);
+      background: rgba(26, 107, 107, 0.06);
+    }
+    .doc-open {
+      flex: 1;
+      text-align: left;
+      border: 1px solid var(--line);
+      background: rgba(251, 252, 253, 0.72);
+      border-radius: 12px;
+      padding: 11px 12px;
+      cursor: pointer;
+      font-family: inherit;
+      color: inherit;
+    }
+    .doc-item.focus .doc-open { border-color: transparent; background: transparent; }
+    .doc-title { display: block; font-weight: 700; font-size: 0.9rem; margin-bottom: 3px; }
+    .doc-sub { display: block; font-size: 0.7rem; color: var(--ink-soft); }
+    .doc-del {
+      width: 36px;
+      border: none;
+      background: transparent;
+      color: #9aabba;
+      font-size: 1.2rem;
+      cursor: pointer;
+      border-radius: 10px;
+    }
+    #empty { font-size: 0.85rem; color: var(--ink-soft); }
+
+    /* Studio — NotebookLM style cards */
+    .studio-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .studio-card {
+      border: 1px solid var(--line);
+      background: rgba(251, 252, 253, 0.85);
+      border-radius: 16px;
+      padding: 14px 12px;
+      text-align: left;
+      cursor: pointer;
+      font-family: inherit;
+      color: inherit;
+      transition: transform 0.15s, border-color 0.2s, background 0.2s;
+      min-height: 108px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .studio-card:active { transform: scale(0.98); }
+    .studio-card:hover { border-color: rgba(26, 107, 107, 0.35); }
+    .studio-card:disabled { opacity: 0.45; cursor: not-allowed; }
+    .studio-card .ico {
+      font-size: 1.35rem;
+      line-height: 1;
+      letter-spacing: -0.06em;
+      font-weight: 800;
+      color: var(--sea);
+    }
+    .studio-card h3 {
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .studio-card p {
+      font-size: 0.72rem;
+      color: var(--ink-soft);
+      line-height: 1.35;
+    }
+
+    .studio-out h3 {
+      font-size: 0.85rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .studio-out .body {
+      font-family: var(--font-read);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      max-height: 40vh;
+      overflow: auto;
+    }
+    .dialogue-line { margin-bottom: 10px; }
+    .dialogue-line .who {
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: var(--sea);
+      letter-spacing: 0.06em;
+    }
+    .dialogue-line.active .who { color: var(--amber); }
+    .dialogue-line.active .say { background: rgba(196, 120, 42, 0.08); border-radius: 8px; }
+
+    .studio-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    #video-preview {
+      width: 100%;
+      border-radius: 12px;
+      background: #0f2a2a;
+      margin-top: 10px;
+      max-height: 220px;
+    }
+    #video-preview:not([src]) { display: none; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+    }
+    .field input, .field select {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--ink);
+      background: rgba(251, 252, 253, 0.95);
+    }
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .provider-fields[hidden] { display: none !important; }
+
+    .progress {
+      height: 4px;
+      background: rgba(20, 32, 43, 0.08);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-top: 10px;
+      display: none;
+    }
+    .progress.show { display: block; }
+    .progress > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: var(--sea);
+      transition: width 0.2s;
+    }
+
+    .ask-row { display: flex; gap: 8px; margin-top: 8px; }
+    #ask-input {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      background: rgba(251, 252, 253, 0.9);
+    }
+    #ask-btn {
+      border: none;
+      background: var(--sea);
+      color: #fff;
+      font-family: inherit;
+      font-weight: 700;
+      border-radius: 12px;
+      padding: 0 14px;
+      cursor: pointer;
+    }
+    #ask-answer {
+      margin-top: 12px;
+      font-family: var(--font-read);
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: var(--ink);
+    }
+
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(22px + var(--safe-bottom));
+      transform: translateX(-50%) translateY(12px);
+      background: var(--ink);
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 10px 16px;
+      border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 20;
+      max-width: 90vw;
+      text-align: center;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 280px), (max-height: 300px) {
+      .app { padding: 8px; }
+      .brand { font-size: 1.35rem; }
+      .brand-sub, .studio-card p, #stats-line, .tagline { display: none; }
+      .studio-grid { grid-template-columns: 1fr; gap: 6px; }
+      .studio-card { min-height: auto; padding: 10px; }
+      .tabs { margin-bottom: 8px; }
+      .tab { padding: 8px 4px; font-size: 0.72rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div>
+        <h1 class="brand">清<em>页</em></h1>
+        <div class="brand-sub">NOTEBOOK · STUDIO</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button type="button" class="ghost" id="settings-btn">TTS 设置</button>
+        <button type="button" class="ghost" id="wear-btn">戒指 / 手杖</button>
+      </div>
+    </header>
+
+    <section id="settings-panel" class="ask-box" hidden style="margin-bottom:12px">
+      <h3 style="font-size:0.85rem;font-weight:800;margin-bottom:8px">云端 TTS · 播客音质</h3>
+      <p style="font-size:0.72rem;color:var(--ink-soft);margin-bottom:10px;line-height:1.4">
+        Key 仅存本机。真机走原生网络；浏览器若遇 CORS，请用 APK 或兼容中转 Base URL。
+      </p>
+      <label class="field">
+        <span>提供商</span>
+        <select id="set-provider">
+          <option value="device">设备朗读（免费）</option>
+          <option value="openai">OpenAI TTS（tts-1-hd）</option>
+          <option value="elevenlabs">ElevenLabs（更接近真人）</option>
+        </select>
+      </label>
+      <div id="set-openai" class="provider-fields">
+        <label class="field"><span>OpenAI API Key</span><input id="set-openai-key" type="password" autocomplete="off" placeholder="sk-…" /></label>
+        <label class="field"><span>Base URL</span><input id="set-openai-base" type="url" placeholder="https://api.openai.com/v1" /></label>
+        <label class="field"><span>模型</span>
+          <select id="set-openai-model">
+            <option value="tts-1-hd">tts-1-hd（推荐）</option>
+            <option value="tts-1">tts-1（更快）</option>
+          </select>
+        </label>
+        <div class="field-row">
+          <label class="field"><span>主持 A</span>
+            <select id="set-openai-voice-a"></select>
+          </label>
+          <label class="field"><span>主持 B</span>
+            <select id="set-openai-voice-b"></select>
+          </label>
+        </div>
+      </div>
+      <div id="set-eleven" class="provider-fields" hidden>
+        <label class="field"><span>ElevenLabs API Key</span><input id="set-eleven-key" type="password" autocomplete="off" placeholder="xi-…" /></label>
+        <label class="field"><span>Base URL</span><input id="set-eleven-base" type="url" placeholder="https://api.elevenlabs.io/v1" /></label>
+        <label class="field"><span>模型</span>
+          <select id="set-eleven-model">
+            <option value="eleven_multilingual_v2">eleven_multilingual_v2</option>
+            <option value="eleven_turbo_v2_5">eleven_turbo_v2_5</option>
+          </select>
+        </label>
+        <label class="field"><span>Voice A ID</span><input id="set-eleven-voice-a" type="text" placeholder="主持 A voice_id" /></label>
+        <label class="field"><span>Voice B ID</span><input id="set-eleven-voice-b" type="text" placeholder="主持 B voice_id" /></label>
+      </div>
+      <div class="studio-actions" style="margin-top:10px">
+        <button type="button" class="tool primary" id="settings-save">保存</button>
+        <button type="button" class="tool" id="settings-close">关闭</button>
+        <span id="settings-status" style="font-size:0.72rem;color:var(--ink-soft);align-self:center"></span>
+      </div>
+    </section>
+
+    <section class="clip-bar" aria-label="添加来源">
+      <div class="url-row">
+        <input id="url" type="url" inputmode="url" autocomplete="url" placeholder="粘贴网页，转文档 / 音频 / 视频…" />
+        <button type="button" id="clip-btn">添加来源</button>
+      </div>
+      <div class="actions-row">
+        <button type="button" class="ghost" id="paste-btn">粘贴 HTML</button>
+        <button type="button" class="ghost" id="quick-audio">转音频</button>
+        <button type="button" class="ghost" id="quick-video">转视频</button>
+      </div>
+      <div id="paste-panel">
+        <textarea id="paste-area" placeholder="粘贴网页 HTML 或正文…"></textarea>
+        <button type="button" id="paste-clip">清洗并添加</button>
+      </div>
+    </section>
+
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="sources" role="tab">来源</button>
+      <button type="button" class="tab" data-tab="studio" role="tab">Studio</button>
+      <button type="button" class="tab" data-tab="ask" role="tab">问答</button>
+    </nav>
+
+    <!-- Sources -->
+    <section id="panel-sources" class="panel active" role="tabpanel">
+      <div class="source-card hidden" id="source-card">
+        <div class="source-title" id="preview-meta"></div>
+        <div id="stats-line"></div>
+        <div class="format-row">
+          <select id="format">
+            <option value="markdown">Markdown</option>
+            <option value="text">纯文本</option>
+            <option value="html">HTML</option>
+          </select>
+          <button type="button" class="tool" id="copy-btn">复制</button>
+          <button type="button" class="tool" id="share-btn">分享</button>
+          <button type="button" class="tool primary" id="save-btn">收入文库</button>
+        </div>
+        <pre id="preview-body"></pre>
+      </div>
+
+      <div class="lib-head">
+        <h2>来源库</h2>
+        <span id="count">0</span>
+      </div>
+      <p id="empty">添加网页来源后，可在 Studio 生成音频 / 视频概览。</p>
+      <ul id="doc-list"></ul>
+    </section>
+
+    <!-- Studio -->
+    <section id="panel-studio" class="panel" role="tabpanel">
+      <div class="section-head">
+        <h2>Studio</h2>
+        <span id="studio-source-label" style="font-size:0.72rem;color:var(--ink-soft)">未选来源</span>
+      </div>
+      <div class="studio-grid">
+        <button type="button" class="studio-card" id="btn-audio" disabled>
+          <span class="ico">Audio</span>
+          <h3>音频概览</h3>
+          <p>双人播客 · 云端高音质 / 设备朗读</p>
+        </button>
+        <button type="button" class="studio-card" id="btn-video" disabled>
+          <span class="ico">Video</span>
+          <h3>视频概览</h3>
+          <p>要点幻灯片，导出可分享视频</p>
+        </button>
+        <button type="button" class="studio-card" id="btn-brief" disabled>
+          <span class="ico">Brief</span>
+          <h3>简报</h3>
+          <p>一句话摘要 + 要点列表</p>
+        </button>
+        <button type="button" class="studio-card" id="btn-faq" disabled>
+          <span class="ico">FAQ</span>
+          <h3>常见问题</h3>
+          <p>从正文提炼可读问答</p>
+        </button>
+      </div>
+
+      <div class="progress" id="gen-progress"><i></i></div>
+
+      <div class="studio-out" id="studio-out" hidden>
+        <h3 id="studio-out-title">输出</h3>
+        <div class="body" id="studio-out-body"></div>
+        <audio id="audio-preview" controls playsinline style="width:100%;margin-top:10px;display:none"></audio>
+        <video id="video-preview" controls playsinline></video>
+        <div class="studio-actions">
+          <button type="button" class="tool" id="studio-cloud" hidden>生成云端播客</button>
+          <button type="button" class="tool" id="studio-play" hidden>播放</button>
+          <button type="button" class="tool" id="studio-stop" hidden>停止</button>
+          <button type="button" class="tool" id="studio-copy">复制脚本</button>
+          <button type="button" class="tool primary" id="studio-download" hidden>下载</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ask -->
+    <section id="panel-ask" class="panel" role="tabpanel">
+      <div class="ask-box">
+        <h3 style="font-size:0.85rem;font-weight:800;margin-bottom:6px">基于当前来源提问</h3>
+        <p style="font-size:0.75rem;color:var(--ink-soft);margin-bottom:4px">本地检索原文句子作答，无需联网模型。</p>
+        <div class="ask-row">
+          <input id="ask-input" type="text" placeholder="例如：核心观点是什么？" />
+          <button type="button" id="ask-btn">问</button>
+        </div>
+        <div id="ask-answer"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" role="status"></div>
+  <script src="js/app.js"></script>
+</body>
+</html>
